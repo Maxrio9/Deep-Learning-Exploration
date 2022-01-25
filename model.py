@@ -11,7 +11,8 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 
 tf.random.set_seed(42) #for reproducibility of result we always use the same seed for random number generator
-# Working directory: C:\Users\lasse\OneDrive\Dokumente\Coding\Deep Learning
+
+# Enter present working directory
 dataset = pd.read_csv("insurance.csv") #read the dataset
 
 def design_model():
