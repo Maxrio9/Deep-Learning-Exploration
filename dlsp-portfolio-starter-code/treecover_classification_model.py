@@ -14,6 +14,7 @@ from keras.wrappers.scikit_learn import KerasRegressor
 from scipy.stats import randint as sp_randint
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import make_scorer
+from tensorflow.keras.callbacks import EarlyStopping
 
 from sklearn.metrics import classification_report
 
@@ -24,14 +25,12 @@ dataset = pd.read_csv("cover_data.csv")
 features = dataset.iloc[:,0:-2]
 labels = dataset.iloc[:,-1]
 
-features_train, features_test, labels_train, labels_test = train_test_split(features, labels, test_size=0.33, random_state=42)
+features_train, features_test, labels_train, labels_test = train_test_split(features, labels, test_size=0.33, random_state=42, stratify=labels)
 
 #standardize
 ct = ColumnTransformer([('standardize', StandardScaler(), ['Elevation', 'Aspect', 'Slope', 'Horizontal_Distance_To_Hydrology', 'Vertical_Distance_To_Hydrology', 'Horizontal_Distance_To_Roadways', 'Hillshade_9am', 'Hillshade_Noon', 'Hillshade_3pm', 'Horizontal_Distance_To_Fire_Points'])], remainder='passthrough')
 scaled_features_train = ct.fit_transform(features_train) #gives numpy arrays
 scaled_features_test = ct.transform(features_test) #gives numpy arrays
-
-labels_train = pd.get_dummies(labels_train)
 
 
 def design_model():
@@ -45,7 +44,7 @@ def design_model():
   model.add(tf.keras.layers.Flatten())
   model.add(layers.Dense(8, activation = 'softmax'))
   opt = tf.keras.optimizers.Adam(learning_rate = 0.01)
-  model.compile(loss = tf.keras.losses.CategoricalCrossentropy(), metrics = [tf.keras.metrics.CategoricalAccuracy(), tf.keras.metrics.AUC()], optimizer=opt)
+  model.compile(loss = 'sparse_categorical_crossentropy', metrics = ['accuracy'], optimizer=opt)
   return model
 
 # print(model.summary())
@@ -64,7 +63,8 @@ def design_model():
 #     print("%f (%f) with: %r" % (mean, stdev, param))
 
 model = design_model()
-history = model.fit(scaled_features_train, labels_train, epochs=12, validation_data=(scaled_features_test, labels_test), verbose=0, batch_size = 12)
+earlystop_callback = EarlyStopping(monitor='val_accuracy', min_delta=0.0001, patience=3)
+history = model.fit(scaled_features_train, labels_train, epochs=12, validation_data=(scaled_features_test, labels_test), verbose=0, batch_size = 12, callbacks=[earlystop_callback])
 print('History:', history.history)
 
 y_estimate = model.predict(scaled_features_test)
