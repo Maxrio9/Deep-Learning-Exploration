@@ -16,13 +16,14 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import make_scorer
 from tensorflow.keras.callbacks import EarlyStopping
 
+
 from sklearn.metrics import classification_report
 
 
 # Processing data
 dataset = pd.read_csv("cover_data.csv")
 
-features = dataset.iloc[:,0:-2]
+features = dataset.iloc[:,:-1]
 labels = dataset.iloc[:,-1]
 
 features_train, features_test, labels_train, labels_test = train_test_split(features, labels, test_size=0.33, random_state=42, stratify=labels)
@@ -40,7 +41,9 @@ def design_model():
   input = tf.keras.Input(shape=(scaled_features_train.shape[1],))
   model.add(input)
   model.add(layers.Dense(64, activation = 'relu'))
+  # model.add(layers.Dropout(0.3))
   model.add(layers.Dense(16, activation = 'relu'))
+  # model.add(layers.Dropout(0.15))
   model.add(tf.keras.layers.Flatten())
   model.add(layers.Dense(8, activation = 'softmax'))
   opt = tf.keras.optimizers.Adam(learning_rate = 0.01)
@@ -49,6 +52,9 @@ def design_model():
 
 # print(model.summary())
 
+
+# Uncomment for Hyperparameter tuning
+#-----------------------------------------------------------------------------------------------------------------------
 # param_grid = {'batch_size': sp_randint(2,16), 'nb_epoch': sp_randint(10, 100)}
 # model = KerasRegressor(build_fn=design_model)
 # grid = RandomizedSearchCV(estimator = model, param_distributions = param_grid, scoring = make_scorer(accuracy_score, greater_is_better=False), n_iter = 12)
@@ -61,14 +67,18 @@ def design_model():
 # params = grid_result.cv_results_['params']
 # for mean, stdev, param in zip(means, stds, params):
 #     print("%f (%f) with: %r" % (mean, stdev, param))
+#-----------------------------------------------------------------------------------------------------------------------
+
+
 
 model = design_model()
+print(labels_train.shape)
 earlystop_callback = EarlyStopping(monitor='val_accuracy', min_delta=0.0001, patience=3)
-history = model.fit(scaled_features_train, labels_train, epochs=12, validation_data=(scaled_features_test, labels_test), verbose=0, batch_size = 12, callbacks=[earlystop_callback])
+history = model.fit(scaled_features_train, labels_train, callbacks = [earlystop_callback], epochs=12, validation_data=(scaled_features_test, labels_test), verbose=0, batch_size = 32)
 print('History:', history.history)
 
-y_estimate = model.predict(scaled_features_test)
-y_estimate = np.argmax(y_estimate, axis = 1)
-y_true = np.argmax(labels_test, axis = 1)
+# y_estimate = model.predict(scaled_features_test)
+# y_estimate = np.argmax(y_estimate, axis = 1)
+# y_true = np.argmax(labels_test, axis = 1)
 
-print(classification_report(y_true, y_estimate))
+# print(classification_report(y_true, y_estimate))
